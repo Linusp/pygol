@@ -1,0 +1,7 @@
+{
+    "Glider": [
+        [False, True, False],
+        [False, False, True],
+        [True, True, True]
+    ]
+}
