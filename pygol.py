@@ -247,8 +247,8 @@ class ShowGOL(tk.Tk):
         pause_icon = tk.PhotoImage(file = self.pause_icon)
         self.button_pause = tk.Button(
             self.toolbar,
-            width = 30,
-            height = 30,
+            width = 24,
+            height = 24,
             image = pause_icon,
             command = self.pause_world)
         self.button_pause.image = pause_icon
