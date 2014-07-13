@@ -301,11 +301,13 @@ class ShowGOL(tk.Tk):
                     self.world[row, col] = self.canvas.create_rectangle(
                         x1, y1, x2, y2,
                         fill = self.color_alive,
+                        outline = "gray",
                         tags = "rect")
                 else:
                     self.world[row, col] = self.canvas.create_rectangle(
                         x1, y1, x2, y2,
                         fill = self.color_dead,
+                        outline = "gray",
                         tags = "rect")
 
     def life(self, delay):
