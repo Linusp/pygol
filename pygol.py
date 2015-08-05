@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import Tkinter as tk
 import Pmw
 import json
+import Tkinter as tk
+from operator import itemgetter
 
 
 class GOL():
@@ -14,10 +15,8 @@ class GOL():
     """
     def __init__(self, row = 0, col = 0):
         """Init size and status of world."""
-        self.row = row
-        self.col = col
+        self.row, self.col = row, col
         self.now = {}
-        self.next = {}
         self.init_status([])
 
     def init_status(self, init_cells):
@@ -27,38 +26,34 @@ class GOL():
         to initialize the world.
 
         Args:
-            init_cells: begining status given. It's a tow-dimensional
-                        array. Becase its size maybe smaller than the
-                        world, we should be map each coordinate to the
-                        center area of world.
+            init_cells: begining status given. It's a a list of tuples.
+                        each tuple in it is coordinate of a alive cell,
+                        for example: [(10, 20), (10, 21)]
         """
+        if len(init_cells) == 0:
+            self.now = {}
+            return
 
-        # get size of begining status set
-        init_row = len(init_cells)
-        if (init_row == 0):
-            init_col = 0
-        else:
-            init_col = len(init_cells[0])
+        # get bounding box of given set of cells.
+        min_x = min(init_cells, key=itemgetter(0))[0]
+        max_x = max(init_cells, key=itemgetter(0))[0]
+        min_y = min(init_cells, key=itemgetter(1))[1]
+        max_y = max(init_cells, key=itemgetter(1))[1]
+
+        if max_x >= self.col or max_y >= self.row:
+            raise Exception("Size of begining status set is too large(x:%d-%d;y:%d-%d)"
+                            % (min_x, max_x, min_y, max_y))
+
         # compute offset in row direction and column direction
-        row_off = (self.row - init_row) / 2
-        col_off = (self.col - init_col) / 2
-
-        # check size
-        if (row_off < 0 or col_off < 0):
-            raise Exception("Size of begining status set is too large")
+        # TODO: offset is wrong.
+        row_off = (self.row - max_y - min_y) / 2
+        col_off = (self.col - max_x - min_x) / 2
 
         # create the world
-        for crow in range(self.row):
-            for ccol in range(self.col):
-                srow = crow - row_off
-                scol = ccol - col_off
-                if (crow in range(row_off, row_off + init_row)
-                    and
-                    ccol in range(col_off, col_off + init_col)):
-                    self.now[crow, ccol] = init_cells[srow][scol]
-                else:
-                    self.now[crow, ccol] = False;
-                self.next[crow, ccol] = False;
+        for cell in init_cells:
+            new_cell = (cell[0] + row_off, cell[1] + col_off)
+            self.now[new_cell] = True
+
 
     def update(self):
         """Update status of world by status before.
@@ -74,32 +69,42 @@ class GOL():
            + if cell is dead, and number of neighbors is three, then
              cell will be alive
         """
-        self.next = self.now.copy()
-        for crow in range(self.row):
-            for ccol in range(self.col):
-                around = self.neighbors(crow, ccol)
-                if (around < 2 or around > 3):
-                    self.next[crow, ccol] = False
+        next_generation = {}
+        related_neighbors = set([])
+        for cell in self.now.keys():
+            # for a alive cell
+            arounds = self.neighbors(cell[0], cell[1])
+            # print 'neighbors of (%d, %d) are: %r' % (cell[0], cell[1], arounds)
+            around_count = sum([1 for c in arounds if c in self.now.keys()])
+            # print '%d alive neighbors for (%d, %d)' % (around_count, cell[0], cell[1])
+            if around_count in (2, 3):
+                next_generation[cell] = True
 
-                elif ((not self.now[crow, ccol]) and
-                      around == 3):
-                    self.next[crow, ccol] = True
+            # record related neighbors
+            dead_neighbors = [c  for c in arounds if c not in self.now.keys()]
+            related_neighbors.update(dead_neighbors)
 
-        self.now = self.next.copy()
+        # update neighbors
+        for cell in related_neighbors:
+            arounds = self.neighbors(cell[0], cell[1])
+            around_count = sum([1 for c in arounds if c in self.now.keys()])
+            if around_count == 3:
+                next_generation[cell] = True
+
+        self.now = next_generation.copy()
         return self.now
 
     def neighbors(self, row, col):
         """Compute number of alive neighbors around a cell."""
-        alive_around = 0
+        res = []
         for i in range(row -1, row + 2):
             for j in range(col - 1, col + 2):
                 irow = i % self.row
                 icol = j % self.col
-                if (not (irow == row and icol == col)):
-                    if (self.now[irow, icol]):
-                        alive_around = alive_around + 1
+                if irow != row or icol != col:
+                    res.append((irow, icol))
 
-        return alive_around
+        return res
 
 
 class ShowGOL(tk.Tk):
@@ -112,13 +117,15 @@ class ShowGOL(tk.Tk):
         """Init resource and world"""
         # init resource
         tk.Tk.__init__(self, *args, **kwargs)
+        # init world
         self.setup_members()    # initialize class members
         self.setup_window()     # root window
-        self.setup_toolbar()    # tool bar
         self.setup_canvas()     # canvas to draw world
-
-        # init world
         self.create_world()
+
+
+        self.setup_toolbar()    # tool bar
+
 
         # make world alive
         self.after(5, lambda: self.life(5))
@@ -161,9 +168,9 @@ class ShowGOL(tk.Tk):
         # make window in the center of screen
         scrn_width, scrn_height = self.maxsize()
         win_height, win_width = self.window_size
-        location = '%dx%d+%d+%d'%(win_width, win_height,
-                                  (scrn_width - win_width) / 2,
-                                  (scrn_height - win_height) / 2)
+        location = '%dx%d+%d+%d' % (win_width, win_height,
+                                    (scrn_width - win_width) / 2,
+                                    (scrn_height - win_height) / 2)
         self.geometry(location)
 
         # set title
@@ -182,6 +189,7 @@ class ShowGOL(tk.Tk):
         self.setup_button_run()
         self.setup_button_pause()
         self.setup_button_stop()
+        self.setup_button_step()
 
     def setup_mode_selector(self):
         """Mode selector
@@ -192,8 +200,11 @@ class ShowGOL(tk.Tk):
         """
         # read modes from json file
         # TODO use more simple ways to read
-        modes_reader = file(self.modes_file)
-        self.init_modes = json.load(modes_reader)
+        try:
+            modes_reader = open(self.modes_file, 'r')
+            self.init_modes = json.load(modes_reader)
+        except Exception:
+            pass
 
         # set selector
         self.modes_names = self.init_modes.keys()
@@ -250,6 +261,14 @@ class ShowGOL(tk.Tk):
             command=self.reset_world)
         self.button_stop.grid(row = 0, column = 4, sticky=tk.W)
 
+    def setup_button_step(self):
+        """Button to step the Game of Life"""
+        self.button_run = tk.Button(
+            self.toolbar,
+            text = 'step',
+            command = self.step_world)
+        self.button_run.grid(row = 0, column = 5, sticky = tk.W)
+
     def setup_canvas(self):
         """Add canvas to root window"""
         # create frame to contain canvas
@@ -277,7 +296,7 @@ class ShowGOL(tk.Tk):
                 x2 = x1 + self.cell_size
                 y2 = y1 + self.cell_size
 
-                if (self.world_status.now[row, col]):
+                if (row, col) in self.world_status.now.keys():
                     self.world[row, col] = self.canvas.create_rectangle(
                         x1, y1, x2, y2,
                         fill = self.color_alive,
@@ -293,17 +312,14 @@ class ShowGOL(tk.Tk):
     def life(self, delay):
         """Loop of the Game of Life"""
         # if world is not alive, then do nothing
-        if (self.world_alive):
+        if self.world_alive:
             self.world_status.update()
-            for row in range(self.cell_row):
-                for col in range(self.cell_col):
-                    item_id = self.world[row, col]
-                    if (self.world_status.now[row, col]):
-                        self.canvas.itemconfig(item_id,
-                                               fill = self.color_alive)
-                    else:
-                        self.canvas.itemconfig(item_id,
-                                               fill = self.color_dead)
+            for cell in [(x, y) for x in range(self.cell_row) for y in range(self.cell_col)]:
+                item_id = self.world[cell]
+                if cell in self.world_status.now.keys():
+                    self.canvas.itemconfig(item_id, fill = self.color_alive)
+                else:
+                    self.canvas.itemconfig(item_id, fill = self.color_dead)
 
         self.after(delay, lambda: self.life(delay))
 
@@ -316,22 +332,18 @@ class ShowGOL(tk.Tk):
             self.world_status.init_status(mode)
 
         self.init_world = self.world_status.now.copy()
-        if (not (len(self.world) == 0)):
-            for row in range(self.cell_row):
-                for col in range(self.cell_col):
-                    item_id = self.world[row, col]
-                    if (self.world_status.now[row, col]):
-                        self.canvas.itemconfig(item_id,
-                                               fill = self.color_alive)
-                    else:
-                        self.canvas.itemconfig(item_id,
-                                               fill = self.color_dead)
+        for cell in [(x, y) for x in range(self.cell_row) for y in range(self.cell_col)]:
+            item_id = self.world[cell]
+            if cell in self.init_world.keys():
+                self.canvas.itemconfig(item_id, fill = self.color_alive)
+            else:
+                self.canvas.itemconfig(item_id, fill = self.color_dead)
 
     def save_mode(self):
         """Save init mode to json file"""
         def save_mode_file():
             name = dialog.entry.get()
-            self.init_modes[name] = self.save_list
+            self.init_modes[name] = self.init_world.keys()
             with open(self.modes_file, 'wb') as fp:
                 json.dump(self.init_modes, fp)
             self.world_alive = old_world_status[0]
@@ -344,41 +356,6 @@ class ShowGOL(tk.Tk):
         old_world_status = [self.world_alive, self.world_setable]
         self.world_alive = False
         self.world_setable = False
-        lu_row = 0
-        lu_col = 0
-        rb_row = self.cell_row - 1
-        rb_col = self.cell_col - 1
-        for row in range(self.cell_row):
-            for col in range(self.cell_col):
-                if (self.init_world[row, col]):
-                    lu_row = row
-                    break
-
-        for col in range(self.cell_col):
-            for row in range(self.cell_row):
-                if (self.init_world[row, col]):
-                    lu_col = col
-                    break
-
-        for row in range(self.cell_row - 1, -1, -1):
-            for col in range(self.cell_col - 1, -1 , -1):
-                if (self.init_world[row, col]):
-                    rb_row = row
-                    break
-
-        for col in range(self.cell_col - 1, -1, -1):
-            for row in range(self.cell_row -1, -1, -1):
-                if (self.init_world[row, col]):
-                    rb_col = col
-                    break
-
-        self.save_list = [[False for col in range(rb_col, lu_col + 1)]
-                          for row in range(rb_row, lu_row + 1)]
-
-        for row in range(rb_row, lu_row + 1):
-            for col in range(rb_col, lu_col + 1):
-                self.save_list[row - rb_row][col - rb_col] = self.init_world[
-                                              row, col]
 
         # show a dialog window to get name or new mode
         dialog = tk.Toplevel(self)
@@ -407,15 +384,28 @@ class ShowGOL(tk.Tk):
         self.world_alive = False
         self.world_setable = True
         self.world_status.now = self.init_world.copy()
-        for row in range(self.cell_row):
-            for col in range(self.cell_col):
-                item_id = self.world[row, col]
-                if (self.world_status.now[row, col]):
-                    self.canvas.itemconfig(item_id,
-                                           fill = self.color_alive)
-                else:
-                    self.canvas.itemconfig(item_id,
-                                           fill = self.color_dead)
+        for cell in [(x, y) for x in range(self.cell_row) for y in range(self.cell_col)]:
+            item_id = self.world[cell]
+            if cell in self.world_status.now.keys():
+                self.canvas.itemconfig(item_id, fill = self.color_alive)
+            else:
+                self.canvas.itemconfig(item_id, fill = self.color_dead)
+
+    def step_world(self):
+        self.world_alive = True
+        self.world_setable = False
+
+        self.world_status.update()
+        for cell in [(x, y) for x in range(self.cell_row) for y in range(self.cell_col)]:
+            item_id = self.world[cell]
+            if cell in self.world_status.now.keys():
+                self.canvas.itemconfig(item_id, fill = self.color_alive)
+            else:
+                self.canvas.itemconfig(item_id, fill = self.color_dead)
+
+        self.world_alive = False
+        self.world_setable = True
+
 
     def click_cell(self, event):
         """Set the cell mouse clicked"""
@@ -425,15 +415,14 @@ class ShowGOL(tk.Tk):
             col = x / self.cell_size
             if ((row in range(self.cell_row)) and
                 (col in range(self.cell_col))):
-                status_now = not self.world_status.now[row, col]
-                if (status_now):
-                    color = self.color_alive
-                else:
+                if (row, col) in self.world_status.now.keys():
                     color = self.color_dead
+                    self.world_status.now.pop((row, col))
+                else:
+                    color = self.color_alive
+                    self.world_status.now[(row, col)] = True
                 item_id = self.world[row, col]
                 self.canvas.itemconfig(item_id, fill=color)
-                self.world_status.now[row, col] = status_now
-                self.world_status.next = self.world_status.now.copy()
                 self.init_world = self.world_status.now.copy()
 
 
