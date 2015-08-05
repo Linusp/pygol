@@ -153,10 +153,6 @@ class ShowGOL(tk.Tk):
         self.window_size[0] += self.toolbar_height
 
         # resource
-        self.saver_icon = "save.gif"
-        self.run_icon = "run.gif"
-        self.pause_icon = "pause.gif"
-        self.stop_icon = "stop.gif"
         self.modes_file = "gol.json"
         self.modes_names = []
 
@@ -220,38 +216,26 @@ class ShowGOL(tk.Tk):
         User can save begining status set by hand to json file.
         Sharing this json file with friends is also a good idea.
         """
-        saver_icon = tk.PhotoImage(file = self.saver_icon)
         self.saver_button = tk.Button(
             self.toolbar,
-            width = 24,
-            height = 24,
-            image = saver_icon,
+            text = 'Save',
             command = self.save_mode)
-        self.saver_button.image = saver_icon
         self.saver_button.grid(row = 0, column = 1, sticky = tk.W)
 
     def setup_button_run(self):
         """Button to run the Game of Life"""
-        run_icon = tk.PhotoImage(file = self.run_icon)
         self.button_run = tk.Button(
             self.toolbar,
-            width = 24,
-            height = 24,
-            image = run_icon,
+            text = 'Run',
             command = self.run_world)
-        self.button_run.image = run_icon
         self.button_run.grid(row = 0, column = 2, sticky = tk.W)
 
     def setup_button_pause(self):
         """Button to pause the Game of Life"""
-        pause_icon = tk.PhotoImage(file = self.pause_icon)
         self.button_pause = tk.Button(
             self.toolbar,
-            width = 24,
-            height = 24,
-            image = pause_icon,
+            text = 'Pause',
             command = self.pause_world)
-        self.button_pause.image = pause_icon
         self.button_pause.grid(row = 0, column = 3, sticky = tk.W)
 
     def setup_button_stop(self):
@@ -260,14 +244,10 @@ class ShowGOL(tk.Tk):
         stopping will set the world to a status initialized using
         the current item in modes selector
         """
-        stop_icon = tk.PhotoImage(file = self.stop_icon)
         self.button_stop = tk.Button(
             self.toolbar,
-            width = 24,
-            height = 24,
-            image = stop_icon,
+            text = 'Stop',
             command=self.reset_world)
-        self.button_stop.image = stop_icon
         self.button_stop.grid(row = 0, column = 4, sticky=tk.W)
 
     def setup_canvas(self):
