@@ -2,7 +2,10 @@
 # -*- coding: utf-8 -*-
 import Pmw
 import json
-import Tkinter as tk
+try:
+    import Tkinter as tk
+except Exception:
+    import tkinter as tk
 from operator import itemgetter
 
 
@@ -13,7 +16,8 @@ class GOL():
     every cell should be alive or dead. Status changes from gen
     -eration to generation.
     """
-    def __init__(self, row = 0, col = 0):
+
+    def __init__(self, row=0, col=0):
         """Init size and status of world."""
         self.row, self.col = row, col
         self.now = {}
@@ -46,14 +50,13 @@ class GOL():
 
         # compute offset in row direction and column direction
         # TODO: offset is wrong.
-        row_off = (self.row - max_y - min_y) / 2
-        col_off = (self.col - max_x - min_x) / 2
+        row_off = (self.row - max_y - min_y) // 2
+        col_off = (self.col - max_x - min_x) // 2
 
         # create the world
         for cell in init_cells:
             new_cell = (cell[0] + row_off, cell[1] + col_off)
             self.now[new_cell] = True
-
 
     def update(self):
         """Update status of world by status before.
@@ -74,14 +77,12 @@ class GOL():
         for cell in self.now.keys():
             # for a alive cell
             arounds = self.neighbors(cell[0], cell[1])
-            # print 'neighbors of (%d, %d) are: %r' % (cell[0], cell[1], arounds)
             around_count = sum([1 for c in arounds if c in self.now.keys()])
-            # print '%d alive neighbors for (%d, %d)' % (around_count, cell[0], cell[1])
             if around_count in (2, 3):
                 next_generation[cell] = True
 
             # record related neighbors
-            dead_neighbors = [c  for c in arounds if c not in self.now.keys()]
+            dead_neighbors = [c for c in arounds if c not in self.now.keys()]
             related_neighbors.update(dead_neighbors)
 
         # update neighbors
@@ -97,7 +98,7 @@ class GOL():
     def neighbors(self, row, col):
         """Compute number of alive neighbors around a cell."""
         res = []
-        for i in range(row -1, row + 2):
+        for i in range(row - 1, row + 2):
             for j in range(col - 1, col + 2):
                 irow = i % self.row
                 icol = j % self.col
@@ -113,6 +114,7 @@ class ShowGOL(tk.Tk):
     Use Tkinter to draw the world of cells and the changes in
     the world.
     """
+
     def __init__(self, *args, **kwargs):
         """Init resource and world"""
         # init resource
@@ -123,9 +125,7 @@ class ShowGOL(tk.Tk):
         self.setup_canvas()     # canvas to draw world
         self.create_world()
 
-
         self.setup_toolbar()    # tool bar
-
 
         # make world alive
         self.after(5, lambda: self.life(5))
@@ -136,14 +136,14 @@ class ShowGOL(tk.Tk):
         These members are main information of class.They are information
         of status, widget, resource and so on
         """
-        ### cell
+        # cell
         self.cell_size = 8
         self.cell_row = 80
         self.cell_col = 100
         self.color_alive = "black"
         self.color_dead = "white"
 
-        ### world
+        # world
         self.init_modes = {}    # read modes from json file
         self.init_world = {}    # begining status
         self.world = {}         # world's map
@@ -169,8 +169,8 @@ class ShowGOL(tk.Tk):
         scrn_width, scrn_height = self.maxsize()
         win_height, win_width = self.window_size
         location = '%dx%d+%d+%d' % (win_width, win_height,
-                                    (scrn_width - win_width) / 2,
-                                    (scrn_height - win_height) / 2)
+                                    (scrn_width - win_width) // 2,
+                                    (scrn_height - win_height) // 2)
         self.geometry(location)
 
         # set title
@@ -180,8 +180,8 @@ class ShowGOL(tk.Tk):
         """Create tool bar"""
         # create frame to contain buttons
         self.toolbar = tk.Frame(self, height=self.toolbar_height)
-        self.toolbar.grid(row = 0, column = 0,
-                          sticky = tk.N+tk.S+tk.W+tk.E)
+        self.toolbar.grid(row=0, column=0,
+                          sticky=tk.N + tk.S + tk.W + tk.E)
 
         # set tools
         self.setup_mode_selector()
@@ -207,16 +207,16 @@ class ShowGOL(tk.Tk):
             pass
 
         # set selector
-        self.modes_names = self.init_modes.keys()
+        self.modes_names = list(self.init_modes.keys())
         self.modes_names.insert(0, "Set by hand")
         self.modes_selector = Pmw.ComboBox(
             self.toolbar,
-            label_text = 'Modes selector',
-            labelpos = 'nw',
-            selectioncommand = self.prepare_world,
-            scrolledlist_items = self.modes_names,
-            )
-        self.modes_selector.grid(row = 0, column = 0, sticky = tk.W)
+            label_text='Modes selector',
+            labelpos='nw',
+            selectioncommand=self.prepare_world,
+            scrolledlist_items=self.modes_names,
+        )
+        self.modes_selector.grid(row=0, column=0, sticky=tk.W)
         first = self.modes_names[0]
         self.modes_selector.selectitem(first)
         self.prepare_world(first)
@@ -229,25 +229,25 @@ class ShowGOL(tk.Tk):
         """
         self.saver_button = tk.Button(
             self.toolbar,
-            text = 'Save',
-            command = self.save_mode)
-        self.saver_button.grid(row = 0, column = 1, sticky = tk.W)
+            text='Save',
+            command=self.save_mode)
+        self.saver_button.grid(row=0, column=1, sticky=tk.W)
 
     def setup_button_run(self):
         """Button to run the Game of Life"""
         self.button_run = tk.Button(
             self.toolbar,
-            text = 'Run',
-            command = self.run_world)
-        self.button_run.grid(row = 0, column = 2, sticky = tk.W)
+            text='Run',
+            command=self.run_world)
+        self.button_run.grid(row=0, column=2, sticky=tk.W)
 
     def setup_button_pause(self):
         """Button to pause the Game of Life"""
         self.button_pause = tk.Button(
             self.toolbar,
-            text = 'Pause',
-            command = self.pause_world)
-        self.button_pause.grid(row = 0, column = 3, sticky = tk.W)
+            text='Pause',
+            command=self.pause_world)
+        self.button_pause.grid(row=0, column=3, sticky=tk.W)
 
     def setup_button_stop(self):
         """Button to stop the Game of Life
@@ -257,34 +257,34 @@ class ShowGOL(tk.Tk):
         """
         self.button_stop = tk.Button(
             self.toolbar,
-            text = 'Stop',
+            text='Stop',
             command=self.reset_world)
-        self.button_stop.grid(row = 0, column = 4, sticky=tk.W)
+        self.button_stop.grid(row=0, column=4, sticky=tk.W)
 
     def setup_button_step(self):
         """Button to step the Game of Life"""
         self.button_run = tk.Button(
             self.toolbar,
-            text = 'step',
-            command = self.step_world)
-        self.button_run.grid(row = 0, column = 5, sticky = tk.W)
+            text='step',
+            command=self.step_world)
+        self.button_run.grid(row=0, column=5, sticky=tk.W)
 
     def setup_canvas(self):
         """Add canvas to root window"""
         # create frame to contain canvas
         self.world_container = tk.Frame(self,
-                                        width = self.world_size[1],
-                                        height = self.world_size[0])
-        self.world_container.grid(row = 1, column = 0, sticky = tk.W+tk.N)
+                                        width=self.world_size[1],
+                                        height=self.world_size[0])
+        self.world_container.grid(row=1, column=0, sticky=tk.W + tk.N)
 
         # create canvas
         self.canvas = tk.Canvas(
             self.world_container,
-            width = self.world_size[1],
-            height = self.world_size[0],
-            borderwidth = 1,
-            highlightthickness = 0)
-        self.canvas.grid(row = 0, column = 0, sticky = tk.W)
+            width=self.world_size[1],
+            height=self.world_size[0],
+            borderwidth=1,
+            highlightthickness=0)
+        self.canvas.grid(row=0, column=0, sticky=tk.W)
         self.canvas.bind('<Button-1>', self.click_cell)
 
     def create_world(self):
@@ -299,15 +299,15 @@ class ShowGOL(tk.Tk):
                 if (row, col) in self.world_status.now.keys():
                     self.world[row, col] = self.canvas.create_rectangle(
                         x1, y1, x2, y2,
-                        fill = self.color_alive,
-                        outline = "gray",
-                        tags = "rect")
+                        fill=self.color_alive,
+                        outline="gray",
+                        tags="rect")
                 else:
                     self.world[row, col] = self.canvas.create_rectangle(
                         x1, y1, x2, y2,
-                        fill = self.color_dead,
-                        outline = "gray",
-                        tags = "rect")
+                        fill=self.color_dead,
+                        outline="gray",
+                        tags="rect")
 
     def life(self, delay):
         """Loop of the Game of Life"""
@@ -317,9 +317,9 @@ class ShowGOL(tk.Tk):
             for cell in [(x, y) for x in range(self.cell_row) for y in range(self.cell_col)]:
                 item_id = self.world[cell]
                 if cell in self.world_status.now.keys():
-                    self.canvas.itemconfig(item_id, fill = self.color_alive)
+                    self.canvas.itemconfig(item_id, fill=self.color_alive)
                 else:
-                    self.canvas.itemconfig(item_id, fill = self.color_dead)
+                    self.canvas.itemconfig(item_id, fill=self.color_dead)
 
         self.after(delay, lambda: self.life(delay))
 
@@ -327,7 +327,7 @@ class ShowGOL(tk.Tk):
         """Init status of world with mode selected"""
         self.world_alive = False
         self.world_setable = True
-        if (self.init_modes.has_key(mode_name)):
+        if mode_name in self.init_modes:
             mode = self.init_modes[mode_name]
             self.world_status.init_status(mode)
 
@@ -335,9 +335,9 @@ class ShowGOL(tk.Tk):
         for cell in [(x, y) for x in range(self.cell_row) for y in range(self.cell_col)]:
             item_id = self.world[cell]
             if cell in self.init_world.keys():
-                self.canvas.itemconfig(item_id, fill = self.color_alive)
+                self.canvas.itemconfig(item_id, fill=self.color_alive)
             else:
-                self.canvas.itemconfig(item_id, fill = self.color_dead)
+                self.canvas.itemconfig(item_id, fill=self.color_dead)
 
     def save_mode(self):
         """Save init mode to json file"""
@@ -360,14 +360,12 @@ class ShowGOL(tk.Tk):
         # show a dialog window to get name or new mode
         dialog = tk.Toplevel(self)
         dialog.label = tk.Label(dialog, text="Please enter the name of new mode")
-        dialog.label.grid(row = 0, column = 0, sticky = tk.N)
+        dialog.label.grid(row=0, column=0, sticky=tk.N)
         dialog.entry = tk.Entry(dialog)
-        dialog.entry.grid(row = 1, column = 0, sticky = tk.N)
-        dialog.ok_button = tk.Button(dialog, text = "OK", command = save_mode_file)
-        dialog.ok_button.grid(row = 2, column = 0, sticky = tk.N)
+        dialog.entry.grid(row=1, column=0, sticky=tk.N)
+        dialog.ok_button = tk.Button(dialog, text="OK", command=save_mode_file)
+        dialog.ok_button.grid(row=2, column=0, sticky=tk.N)
         self.wait_window(dialog)
-
-
 
     def run_world(self):
         """Make the world alive"""
@@ -387,9 +385,9 @@ class ShowGOL(tk.Tk):
         for cell in [(x, y) for x in range(self.cell_row) for y in range(self.cell_col)]:
             item_id = self.world[cell]
             if cell in self.world_status.now.keys():
-                self.canvas.itemconfig(item_id, fill = self.color_alive)
+                self.canvas.itemconfig(item_id, fill=self.color_alive)
             else:
-                self.canvas.itemconfig(item_id, fill = self.color_dead)
+                self.canvas.itemconfig(item_id, fill=self.color_dead)
 
     def step_world(self):
         self.world_alive = True
@@ -399,22 +397,21 @@ class ShowGOL(tk.Tk):
         for cell in [(x, y) for x in range(self.cell_row) for y in range(self.cell_col)]:
             item_id = self.world[cell]
             if cell in self.world_status.now.keys():
-                self.canvas.itemconfig(item_id, fill = self.color_alive)
+                self.canvas.itemconfig(item_id, fill=self.color_alive)
             else:
-                self.canvas.itemconfig(item_id, fill = self.color_dead)
+                self.canvas.itemconfig(item_id, fill=self.color_dead)
 
         self.world_alive = False
         self.world_setable = True
-
 
     def click_cell(self, event):
         """Set the cell mouse clicked"""
         if (self.world_setable):
             x, y = event.x, event.y
-            row = y / self.cell_size
-            col = x / self.cell_size
+            row = y // self.cell_size
+            col = x // self.cell_size
             if ((row in range(self.cell_row)) and
-                (col in range(self.cell_col))):
+                    (col in range(self.cell_col))):
                 if (row, col) in self.world_status.now.keys():
                     color = self.color_dead
                     self.world_status.now.pop((row, col))
